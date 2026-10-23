@@ -1,0 +1,18 @@
+[project]
+name = "ntedit"
+version = "0.1.0"
+description = "Tkinter editor for NinjaTracker V2 style C64 music with PSID export"
+requires-python = ">=3.10"
+dependencies = ["numpy", "py65", "pyresidfp", "sounddevice"]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[project.scripts]
+ntedit = "ntedit.gui:main"
+
+[tool.setuptools]
+packages = ["ntedit"]
+
+[tool.setuptools.package-data]
+ntedit = ["player.bin", "player.lbl"]

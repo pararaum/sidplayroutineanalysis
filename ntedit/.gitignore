@@ -1,0 +1,5 @@
+.venv/
+__pycache__/
+*.pyc
+player/*.o
+.pytest_cache/

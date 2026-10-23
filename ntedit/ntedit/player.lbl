@@ -1,0 +1,9 @@
+al 001000 .init_entry
+al 0014D3 .nt_end
+al 0011F5 .nt_firstwave
+al 00114A .nt_hrparam
+al 0010C0 .nt_music
+al 001012 .nt_newmusic
+al 0010A0 .nt_playsfx
+al 00109C .nt_playsong
+al 001003 .play_entry
