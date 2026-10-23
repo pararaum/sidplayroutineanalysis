@@ -1,8 +1,11 @@
 # CLAUDE.md
 
+> The project lives in the `ntedit/` subdirectory of this repository; all paths below are
+> relative to it (`cd ntedit`). The package itself is `ntedit/ntedit/`.
+
 `ntedit` is a Tkinter editor for NinjaTracker V2 style C64 music with real-time
 playback and PSID export. Background and format details: `docs/ANALYSIS.md`
-(read it before changing packing or player code). User docs: `README.md`.
+(i.e. `ntedit/docs/ANALYSIS.md` from the repo root; read it before changing packing or player code). User docs: `README.md`.
 
 ## Layout
 
@@ -22,6 +25,8 @@ playback and PSID export. Background and format details: `docs/ANALYSIS.md`
 - `tests/` - pytest suite; `gui_smoke*.py` are manual headless GUI checks.
 
 ## Commands
+
+Run from the `ntedit/` subdirectory:
 
     python3 -m venv --system-site-packages .venv   # tkinter comes from the system (python3-tk)
     .venv/bin/pip install numpy py65 pyresidfp sounddevice pytest

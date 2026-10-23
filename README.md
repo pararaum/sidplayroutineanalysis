@@ -1,5 +1,8 @@
 # ntedit
 
+> The project lives in the `ntedit/` subdirectory of this repository; all paths below are
+> relative to it (`cd ntedit`). The package itself is `ntedit/ntedit/`.
+
 A small Tkinter editor for **NinjaTracker V2** style C64 music (Cadaver /
 Covert Bitops), with real-time playback and PSID export.
 
@@ -14,6 +17,7 @@ Covert Bitops), with real-time playback and PSID export.
 
 ## Running
 
+    cd ntedit
     python3 -m venv --system-site-packages .venv      # needs python3-tk
     .venv/bin/pip install numpy py65 pyresidfp sounddevice pytest
     .venv/bin/python -m ntedit [file.nt2.json | file.bin | file.sid]
@@ -28,13 +32,14 @@ re-imported; original NinjaTracker "gamemusic" `.bin` files (address stripped, b
 
 ## Tests
 
+    cd ntedit
     .venv/bin/python -m pytest tests
     PYTHONPATH=. xvfb-run -a .venv/bin/python tests/gui_smoke.py    # headless GUI check
 
 `tests/test_emu.py` checks that the register stream of this player matches the original
 dasm-built player (running the original data) frame for frame.
 
-## Format notes (see packed.py for the layout)
+## Format notes (see `ntedit/packed.py` for the layout; full analysis in `docs/ANALYSIS.md`)
 
 * Row length in frames = 258 - duration byte (3..65); a hard restart happens in the two
   frames before a note.

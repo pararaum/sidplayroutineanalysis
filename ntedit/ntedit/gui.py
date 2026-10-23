@@ -53,11 +53,16 @@ class Grid(tk.Canvas):
         self.configure(width=self.total_w + 4)
         self.bind("<Key>", self._key)
         self.bind("<Button-1>", self._click)
-        self.bind("<FocusIn>", lambda e: self.redraw())
-        self.bind("<FocusOut>", lambda e: self.redraw())
+        self._focused = False        # focus_get() raises KeyError while a menu is open
+        self.bind("<FocusIn>", lambda e: self._set_focus(True))
+        self.bind("<FocusOut>", lambda e: self._set_focus(False))
         self.bind("<MouseWheel>", lambda e: self.yview_scroll(-1 if e.delta > 0 else 1, "units"))
         self.bind("<Button-4>", lambda e: self.yview_scroll(-3, "units"))
         self.bind("<Button-5>", lambda e: self.yview_scroll(3, "units"))
+
+    def _set_focus(self, focused: bool):
+        self._focused = focused
+        self.redraw()
 
     # -- to override -------------------------------------------------------
     def nrows(self) -> int:
@@ -77,7 +82,7 @@ class Grid(tk.Canvas):
     def redraw(self):
         self.delete("all")
         n = self.nrows()
-        has_focus = self.focus_get() is self
+        has_focus = self._focused
         for r in range(max(n, 1)):
             y = r * self.ROW_H
             if r == self.cur_row and n:
