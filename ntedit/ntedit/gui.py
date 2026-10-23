@@ -657,6 +657,7 @@ class App(tk.Tk):
         f.add_command(label="Import SID made by this editor...", command=self.import_sid)
         f.add_separator()
         f.add_command(label="Export NinjaTracker song (.nt2)...", command=self.export_nt2)
+        f.add_command(label="Export assembly (.s, ca65)...", command=self.export_asm)
         f.add_command(label="Export SID...", command=self.export_sid)
         f.add_command(label="Export WAV...", command=self.export_wav)
         f.add_separator()
@@ -1010,6 +1011,20 @@ class App(tk.Tk):
         if p:
             try:
                 write_psid(self.song, p)
+                self.status.config(text=f"wrote {p}")
+            except Exception as e:
+                messagebox.showerror("Export failed", str(e))
+
+    def export_asm(self):
+        from .asmexport import write_asm
+        msgs = [m for m in self.validate() if m.startswith("export") or "empty" in m]
+        if msgs:
+            messagebox.showerror("Cannot export", "\n".join(msgs))
+            return
+        p = filedialog.asksaveasfilename(defaultextension=".s", filetypes=[("ca65 source", "*.s")])
+        if p:
+            try:
+                write_asm(self.song, p)
                 self.status.config(text=f"wrote {p}")
             except Exception as e:
                 messagebox.showerror("Export failed", str(e))

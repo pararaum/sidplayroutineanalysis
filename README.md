@@ -9,11 +9,13 @@ Covert Bitops), with real-time playback and PSID export.
 * `ntedit/model.py`  – song model (patterns, commands, wave/pulse/filter tables, tracks)
 * `ntedit/packed.py` – bit-exact reader/writer of NinjaTracker's packed "gamemusic" data
 * `ntedit/nt2file.py` – reader/writer of NinjaTracker's own song files (`*.nt2`)
+* `ntedit/asmexport.py` – ca65 source export (play routine + song, relocatable)
 * `ntedit/psid.py`   – PSID export (play routine + packed data)
 * `ntedit/emu.py`    – runs the real 6502 play routine in py65 and renders the SID writes with reSID (pyresidfp)
 * `ntedit/audio.py`  – real-time playback through sounddevice
 * `ntedit/gui.py`    – the editor
-* `player/`          – NinjaTracker's play routine ported to ca65 (`make -C player` rebuilds
+* `ntedit/nt2play.s` – NinjaTracker's play routine ported to ca65 (source of both exports)
+* `player/`          – wrapper used for the SID export (`make -C player` rebuilds
                        `ntedit/player.bin`/`player.lbl`, which are committed)
 
 ## Running
@@ -32,6 +34,22 @@ whose player is at $1000 and data at $14D3.  SIDs written by this editor can be
 re-imported. Songs saved by the original C64 NinjaTracker (`*.nt2`) can be imported (*File > Import NinjaTracker song*,
 or pass the file on the command line) and exported again (*File > Export NinjaTracker song*), including command
 names; original NinjaTracker "gamemusic" `.bin` files (address stripped, base $1000) can be imported too.
+
+## Assembly export
+
+*File > Export assembly (.s, ca65)* or
+
+    .venv/bin/python -m ntedit.asmexport song.nt2 song.s [--no-player] [--prefix NAME]
+
+writes a ca65 source file with the play routine and the song (addresses are symbols, so
+`ld65` can place it anywhere; the play routine modifies itself, so it must be in RAM).
+Exported symbols: `nt_init` (A = subtune, 0-based), `nt_play` (once per frame), `nt_playsfx`,
+`nt_data`, `nt_numsongs`, plus the routine's own `nt_music`, `nt_newmusic`, `nt_playsong`.
+Code goes to segment `CODE`, song data to `RODATA`; two zero page bytes are allocated in segment `ZEROPAGE`
+(`nt_temp1: .res 2`), so the linker config needs that segment.
+With `--no-player` only the song is written (`<prefix>_init`, `<prefix>_data`,
+`<prefix>_numsongs`), to be linked with a file that contains the player; the hard-restart
+and first-wave settings of the song are properties of the player build.
 
 ## Tests
 

@@ -16,6 +16,7 @@ Layout (all multi-byte addresses are absolute, little endian):
 """
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import List, Tuple
 
 from .model import (MAX_TABLE_ROWS, MAX_TRACK_BYTES, Command, Pattern, Row, Song,
@@ -127,28 +128,37 @@ def command_counts(song: Song) -> Tuple[int, int]:
     return last, max(last, leg)
 
 
-def pack(song: Song, base: int = 0x1000) -> bytes:
-    """Serialise song to a data block that will live at address `base`."""
+@dataclass
+class Layout:
+    """The parts of a packed song, before addresses are assigned."""
+    song: Song                                  # prepared copy (empty voices filled)
+    header: bytes
+    tables: List[Tuple[str, bytes]]             # in file order
+    patterns: List[bytes]                       # pattern i+1 at index i
+    tracks: List[bytes]                         # one blob per subtune
+    lens: List[Tuple[int, int, int]]            # track lengths per subtune
+
+    def fixed_size(self) -> int:
+        return (len(self.header) + sum(len(b) for _, b in self.tables)
+                + 2 * len(self.patterns) + 5 * len(self.tracks))
+
+
+def layout(song: Song) -> Layout:
     s = _prepare(song)
     for name, t in (("wave", s.wave), ("pulse", s.pulse), ("filter", s.filt)):
         if len(t) > MAX_TABLE_ROWS:
             raise PackError(f"{name} table has {len(t)} rows (max {MAX_TABLE_ROWS})")
     ncmd, nleg = command_counts(s)
-    lastpatt = 0
+    npat = 0
     for i, p in enumerate(s.patterns):
         if p.rows:
-            lastpatt = i + 1
-    npat = lastpatt
-
-    lastsong = -1
+            npat = i + 1
+    nsongs = 0
     for i, st in enumerate(s.subtunes):
         if not st.is_empty():
-            lastsong = i
-    nsongs = lastsong + 1
+            nsongs = i + 1
 
-    # patterns
     pats = [s.patterns[i].encode() for i in range(npat)]
-    # tracks
     track_blobs: List[bytes] = []
     lens: List[Tuple[int, int, int]] = []
     for st in s.subtunes[:nsongs]:
@@ -162,45 +172,46 @@ def pack(song: Song, base: int = 0x1000) -> bytes:
         track_blobs.append(blob)
         lens.append(ls)
 
-    # tables
-    wave_l = bytes(wave_to_play(l) for l, _ in s.wave)
-    wave_r = bytes(r for _, r in s.wave)
-    pul_l = bytes(l for l, _ in s.pulse)
-    pul_r = bytes(pulse_to_play(l, r) for l, r in s.pulse)
-    fil_l = bytes(l for l, _ in s.filt)
-    fil_r = bytes(r for _, r in s.filt)
-
     cmds = [s.commands[i] if i < len(s.commands) else Command() for i in range(nleg)]
-    cmd_ad = bytes(c.ad for c in cmds[:ncmd])
-    cmd_sr = bytes(c.sr for c in cmds[:ncmd])
-    cmd_w = bytes(c.wave for c in cmds)
-    cmd_p = bytes(c.pulse for c in cmds)
-    cmd_f = bytes(c.filt for c in cmds)
-
+    tables = [
+        ("wave table, waveform / delay / vibrato / slide / jump", bytes(wave_to_play(l) for l, _ in s.wave)),
+        ("wave table, note / arpeggio / depth / target", bytes(r for _, r in s.wave)),
+        ("pulse table, time / set / jump", bytes(l for l, _ in s.pulse)),
+        ("pulse table, speed / value / target", bytes(pulse_to_play(l, r) for l, r in s.pulse)),
+        ("filter table, time / set / jump", bytes(l for l, _ in s.filt)),
+        ("filter table, speed / cutoff / target", bytes(r for _, r in s.filt)),
+        ("command AD", bytes(c.ad for c in cmds[:ncmd])),
+        ("command SR", bytes(c.sr for c in cmds[:ncmd])),
+        ("command wave table position", bytes(c.wave for c in cmds)),
+        ("command pulse table position", bytes(c.pulse for c in cmds)),
+        ("command filter table position", bytes(c.filt for c in cmds)),
+    ]
     header = bytes([len(s.wave), len(s.pulse), len(s.filt), ncmd, nleg, npat])
-    fixed = (len(header) + len(wave_l) * 2 + len(pul_l) * 2 + len(fil_l) * 2
-             + len(cmd_ad) * 2 + len(cmd_w) * 3 + npat * 2 + nsongs * 5)
-    pat_addr = base + fixed
-    patt_total = sum(len(p) for p in pats)
-    trk_addr = pat_addr + patt_total
+    return Layout(s, header, tables, pats, track_blobs, lens)
 
-    out = bytearray(header)
-    for blk in (wave_l, wave_r, pul_l, pul_r, fil_l, fil_r, cmd_ad, cmd_sr, cmd_w, cmd_p, cmd_f):
+
+def pack(song: Song, base: int = 0x1000) -> bytes:
+    """Serialise song to a data block that will live at address `base`."""
+    lay = layout(song)
+    pat_addr = base + lay.fixed_size()
+    trk_addr = pat_addr + sum(len(p) for p in lay.patterns)
+    out = bytearray(lay.header)
+    for _, blk in lay.tables:
         out += blk
     addrs = []
     a = pat_addr
-    for p in pats:
+    for p in lay.patterns:
         addrs.append(a)
         a += len(p)
     out += bytes(x & 0xFF for x in addrs)
     out += bytes(x >> 8 for x in addrs)
     a = trk_addr
-    for blob, (l1, l2, l3) in zip(track_blobs, lens):
+    for blob, (l1, l2, _l3) in zip(lay.tracks, lay.lens):
         out += bytes([a & 0xFF, a >> 8, 0, l1, l1 + l2])
         a += len(blob)
-    for p in pats:
+    for p in lay.patterns:
         out += p
-    for blob in track_blobs:
+    for blob in lay.tracks:
         out += blob
     return bytes(out)
 

@@ -74,3 +74,16 @@ def load_sid(path) -> Song:
     song.author = raw[0x36:0x56].split(b"\0")[0].decode("latin-1")
     song.released = raw[0x56:0x76].split(b"\0")[0].decode("latin-1")
     return song
+
+
+def load_any(path) -> Song:
+    """Load a song by file extension (.nt2, .json project, .bin, .sid)."""
+    from .nt2file import load_nt2
+    low = str(path).lower()
+    if low.endswith(".nt2"):
+        return load_nt2(path)
+    if low.endswith(".sid"):
+        return load_sid(path)
+    if low.endswith(".bin"):
+        return load_packed(path)
+    return load_project(path)

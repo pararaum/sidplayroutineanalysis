@@ -5,7 +5,8 @@
 ;-------------------------------------------------------------------------------
 
 ;-------------------------------------------------------------------------------
-; Defines
+; Defines (NT_HRPARAM, NT_FIRSTWAVE, NT_SFX* may be predefined by the
+; including file: ntedit's assembly export does so)
 ;-------------------------------------------------------------------------------
 
 NT_FIRSTNOTE       = $18
@@ -21,18 +22,28 @@ NT_ADDCMD          = $0c
 NT_ADDLEGATOCMD    = $10
 NT_ADDPATT         = $14
 
+.ifndef NT_HRPARAM
 NT_HRPARAM         = $00
+.endif
+.ifndef NT_FIRSTWAVE
 NT_FIRSTWAVE       = $09
+.endif
+.ifndef NT_SFXHRPARAM
 NT_SFXHRPARAM      = $00
+.endif
+.ifndef NT_SFXFIRSTWAVE
 NT_SFXFIRSTWAVE    = $09
+.endif
 
 ;-------------------------------------------------------------------------------
-; Zeropage work area. 2 consecutive addresses are needed.
+; Zeropage work area: 2 consecutive bytes, allocated in segment ZEROPAGE.
 ;-------------------------------------------------------------------------------
 
-nt_zpbase       = $fc
-nt_temp1        = nt_zpbase+0
-nt_temp2        = nt_zpbase+1
+        .pushseg
+        .segment "ZEROPAGE"
+nt_temp1:       .res 2
+        .popseg
+nt_temp2        = nt_temp1+1
 
 ;-------------------------------------------------------------------------------
 ; NT_NEWMUSIC

@@ -15,4 +15,4 @@ ntedit = "ntedit.gui:main"
 packages = ["ntedit"]
 
 [tool.setuptools.package-data]
-ntedit = ["player.bin", "player.lbl"]
+ntedit = ["player.bin", "player.lbl", "nt2play.s"]
