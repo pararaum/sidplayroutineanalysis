@@ -54,6 +54,7 @@ class Grid(tk.Canvas):
         self.bind("<Key>", self._key)
         self.bind("<Button-1>", self._click)
         self._focused = False        # focus_get() raises KeyError while a menu is open
+        self.bind("<Configure>", lambda e: self.redraw())
         self.bind("<FocusIn>", lambda e: self._set_focus(True))
         self.bind("<FocusOut>", lambda e: self._set_focus(False))
         self.bind("<MouseWheel>", lambda e: self.yview_scroll(-1 if e.delta > 0 else 1, "units"))
@@ -86,7 +87,7 @@ class Grid(tk.Canvas):
         for r in range(max(n, 1)):
             y = r * self.ROW_H
             if r == self.cur_row and n:
-                self.create_rectangle(0, y, self.total_w + 2, y + self.ROW_H,
+                self.create_rectangle(0, y, max(self.total_w + 2, self.winfo_width()), y + self.ROW_H,
                                       fill="#1d2630", outline="")
             if n == 0:
                 continue
@@ -482,7 +483,7 @@ class PatternGrid(Grid):
 
 class TrackGrid(Grid):
     def __init__(self, master, app, voice: int):
-        super().__init__(master, [Col("Pos", 2, False), Col("Item", 4), Col("", 2, False)], app)
+        super().__init__(master, [Col("Pos", 3, False), Col("Item", 6), Col("Loop", 8, False)], app)
         self.voice = voice
         self.cur_col = 1
 
@@ -502,7 +503,7 @@ class TrackGrid(Grid):
             return f"{r:02X}"
         if c == 1:
             return f"{it.value:02X}" if it.kind == "pat" else f"{it.value:+d}"
-        return "<-L" if self.track.loop == r else ""
+        return "<- loop" if self.track.loop == r else ""
 
     def style(self, r, c):
         items = self.track.items
@@ -625,17 +626,18 @@ class App(tk.Tk):
         self.refresh_all()
 
     # -- layout ---------------------------------------------------------------
-    def _boxed(self, parent, grid: "Grid", title: str = ""):
-        """Pack grid with a column header line, a scrollbar and optional title."""
+    def _boxed(self, parent, grid: "Grid", title: str = "", expand: bool = False):
+        """Pack grid with a column header line, a scrollbar and optional title.
+        expand=True lets the grid take its share of the extra window width."""
         box = ttk.Frame(parent)
-        box.pack(side="left", fill="y", padx=6, pady=6)
+        box.pack(side="left", fill="both" if expand else "y", expand=expand, padx=6, pady=6)
         if title:
             ttk.Label(box, text=title).pack()
         hdr = " ".join(c.title.ljust(c.width) for c in grid.cols)
         ttk.Label(box, text=hdr, font=FONT, foreground="#666").pack(anchor="w", padx=(10, 0))
         row = ttk.Frame(box)
         row.pack(fill="both", expand=True)
-        grid.pack(in_=row, side="left", fill="y")
+        grid.pack(in_=row, side="left", fill="both", expand=expand)
         tk.Misc.lift(grid)                      # created before `row`, would be hidden behind it
         sb = ttk.Scrollbar(row, command=grid.yview)
         sb.pack(side="left", fill="y")
@@ -702,7 +704,7 @@ class App(tk.Tk):
         self.track_grids = []
         for v in range(3):
             self.track_grids.append(self._boxed(self.tab_song, TrackGrid(self.tab_song, self, v),
-                                                f"Voice {v + 1}"))
+                                                f"Voice {v + 1}", expand=True))
         self.nb.add(self.tab_song, text="Song")
 
         self.tab_pat = ttk.Frame(self.nb)
