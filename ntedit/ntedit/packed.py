@@ -90,6 +90,30 @@ def _prepare(song: Song) -> Song:
     return s
 
 
+def encode_tracks(st: Subtune) -> Tuple[bytes, Tuple[int, int, int]]:
+    """Bytes of a subtune's three tracks (each ending in `00 loop`, loop
+    positions absolute within the subtune) and the three track lengths."""
+    pos = 0
+    blob = bytearray()
+    ls = []
+    for tr in st.tracks:
+        tr.validate()
+        offs = []
+        seg = bytearray()
+        for it in tr.items:
+            offs.append(len(seg))
+            seg.append(it.encode())
+        if not seg:
+            raise PackError("empty track")
+        if tr.items[-1].kind == "trans":
+            raise PackError("track ends with a transpose")
+        seg += bytes([0, pos + offs[tr.loop]])
+        ls.append(len(seg))
+        blob += seg
+        pos += len(seg)
+    return bytes(blob), (ls[0], ls[1], ls[2])
+
+
 def command_counts(song: Song) -> Tuple[int, int]:
     """(last command used normally, last command used at all)."""
     last = leg = 0
@@ -132,26 +156,11 @@ def pack(song: Song, base: int = 0x1000) -> bytes:
             track_blobs.append(b"")
             lens.append((0, 0, 0))
             continue
-        pos = 0
-        blob = bytearray()
-        ls = []
-        for tr in st.tracks:
-            tr.validate()
-            offs = []
-            seg = bytearray()
-            for it in tr.items:
-                offs.append(len(seg))
-                seg.append(it.encode())
-            if tr.items[-1].kind == "trans":
-                raise PackError("track ends with a transpose")
-            seg += bytes([0, pos + offs[tr.loop]])
-            ls.append(len(seg))
-            blob += seg
-            pos += len(seg)
+        blob, ls = encode_tracks(st)
         if len(blob) > MAX_TRACK_BYTES:
             raise PackError(f"subtune tracks are {len(blob)} bytes (max {MAX_TRACK_BYTES})")
-        track_blobs.append(bytes(blob))
-        lens.append(tuple(ls))
+        track_blobs.append(blob)
+        lens.append(ls)
 
     # tables
     wave_l = bytes(wave_to_play(l) for l, _ in s.wave)

@@ -6,7 +6,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 from typing import Callable, List, Optional
 
-from . import project
+from . import nt2file, project
 from .audio import AudioError, LivePlayer
 from .model import (FIRST_NOTE, LAST_NOTE, MAX_COMMANDS, MAX_DURATION, MAX_PATTERN_BYTES,
                     MAX_PATTERNS, MAX_TABLE_ROWS, MIN_DURATION, Command, Pattern, Row, Song,
@@ -275,7 +275,7 @@ class TableGrid(Grid):
 
 class CommandGrid(Grid):
     def __init__(self, master, app):
-        super().__init__(master, [Col("#", 2, False), Col("Name", 12), Col("AD", 2), Col("SR", 2),
+        super().__init__(master, [Col("#", 2, False), Col("Name", 9), Col("AD", 2), Col("SR", 2),
                                   Col("Wv", 2), Col("Pu", 2), Col("Fl", 2)], app)
         self.cur_col = 2
 
@@ -305,7 +305,7 @@ class CommandGrid(Grid):
                 self.app.push_undo()
                 s.command(r + 1).name = s.command(r + 1).name[:-1]
                 return True
-            if ev.char and ev.char.isprintable() and len(self.cmd(r).name) < 12:
+            if ev.char and ev.char.isprintable() and len(self.cmd(r).name) < 9:
                 self.app.push_undo()
                 k = s.command(r + 1)
                 k.name += ev.char
@@ -650,9 +650,11 @@ class App(tk.Tk):
         f.add_command(label="Save", accelerator="Ctrl+S", command=self.save)
         f.add_command(label="Save as...", command=self.save_as)
         f.add_separator()
+        f.add_command(label="Import NinjaTracker song (.nt2)...", command=self.import_nt2)
         f.add_command(label="Import packed data (.bin)...", command=self.import_bin)
         f.add_command(label="Import SID made by this editor...", command=self.import_sid)
         f.add_separator()
+        f.add_command(label="Export NinjaTracker song (.nt2)...", command=self.export_nt2)
         f.add_command(label="Export SID...", command=self.export_sid)
         f.add_command(label="Export WAV...", command=self.export_wav)
         f.add_separator()
@@ -930,7 +932,9 @@ class App(tk.Tk):
 
     def _open(self, path):
         try:
-            if path.lower().endswith(".sid"):
+            if path.lower().endswith(".nt2"):
+                self._set_song(nt2file.load_nt2(path), None)
+            elif path.lower().endswith(".sid"):
                 song = project.load_sid(path)
                 self._set_song(song, None)
             elif path.lower().endswith(".bin"):
@@ -946,6 +950,23 @@ class App(tk.Tk):
         p = filedialog.askopenfilename(filetypes=[("Projects", "*.nt2.json *.json"), ("All", "*")])
         if p:
             self._open(p)
+
+    def import_nt2(self):
+        if not self._confirm_discard():
+            return
+        p = filedialog.askopenfilename(filetypes=[("NinjaTracker songs", "*.nt2"), ("All", "*")])
+        if p:
+            self._open(p)
+
+    def export_nt2(self):
+        p = filedialog.asksaveasfilename(defaultextension=".nt2",
+                                         filetypes=[("NinjaTracker songs", "*.nt2")])
+        if p:
+            try:
+                nt2file.save_nt2(self.song, p)
+                self.status.config(text=f"wrote {p}")
+            except Exception as e:
+                messagebox.showerror("Export failed", str(e))
 
     def import_bin(self):
         if not self._confirm_discard():

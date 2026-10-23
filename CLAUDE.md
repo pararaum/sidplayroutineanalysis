@@ -18,6 +18,7 @@ playback and PSID export. Background and format details: `docs/ANALYSIS.md`
   `nt_end`) and PSID v2. Reads symbol addresses from `player.lbl`.
 - `ntedit/emu.py` - py65 runs the real play routine; pyresidfp renders it.
 - `ntedit/audio.py` - sounddevice streaming thread (`LivePlayer`).
+- `ntedit/nt2file.py` - `*.nt2` song files of the original editor (`parse`/`build`, RLE codec).
 - `ntedit/project.py` - JSON projects, import of `.bin` and own `.sid` files.
 - `ntedit/gui.py` - `Grid` canvas widget plus Song/Pattern/Command/Table editors, `App`.
 - `player/` - ca65 port of `nt2play.s` (`sidwrap.s` wraps it, `sid.cfg`, `Makefile`).
@@ -47,6 +48,10 @@ cross-checking against the original player and rendering SIDs).
 - **Register-stream golden test** (`tests/test_emu.py`): the cc65 player must emit
   the same SID writes as the original dasm player. If you touch `player/nt2play.s`,
   this must still pass.
+- `.nt2` = `N2` + RLE dump of editor memory (layout in the module docstring). Round trip is
+  functionally exact (`pack()` identical) but not byte exact: stale bytes behind pattern
+  terminators in original files are dropped. The RLE codec itself is byte exact.
+  Command names are 9 ASCII characters. Test songs: `tests/data/*.nt2`.
 - Packed data contains **absolute addresses**; always `pack`/`unpack` with the
   address the data will live at (`psid.DATA_ADDR` for exports, `$1000` for the
   original example).
@@ -65,7 +70,7 @@ cross-checking against the original player and rendering SIDs).
 
 Done: model, packer, PSID export, emulation, live playback, GUI editors, tests.
 Not done: copy/paste, SFX support, note preview while typing, storing command
-names in exported SIDs, editor-style display of the transpose byte (the
+names in exported SIDs (they are kept in `.nt2` and project files), editor-style display of the transpose byte (the
 original readme's "$C0 = zero" disagrees with the player; player semantics
 are used). Live audio output has not been tried on real hardware (the
 development container has no sound device); offline WAV export works.

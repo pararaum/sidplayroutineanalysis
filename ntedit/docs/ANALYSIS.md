@@ -120,6 +120,15 @@ falls through into `nt_playsong` (A = `$FF` afterwards disables re-init).
 `NT_PLAYSFX` plays one-shot effects (format: SR, AD, pulse, then note/wave pairs, `00`) with a priority
 rule based on the data address; `ins2nt2.exe` converts GoatTracker instruments to this.
 
+### 3.7 Song files (`*.nt2`) *(verified on two real songs)*
+
+`N2` tag, then the editor's song memory (`savesongstart..savesongend` in `nt2songdata.s`,
+31975 bytes) with an RLE: `$BF value count` for every run of 2+ equal bytes (count up to
+255), literal `$BF` as `$BF $BF $01`. Memory order: six 256-byte table columns in editor
+representation, 127 x 192 patterns (same encoding as the packed data), 16 x 256 tracks,
+five 127-byte command arrays, 127 x 10 command names, 48 track lengths, 3 table lengths,
+command count, hard-restart SR, first-frame waveform. Implemented in `ntedit/nt2file.py`.
+
 ## 4. Blackbird 1.2 and how it differs
 
 Modern tracker with a cross-platform exporter (`birdcruncher`, C source in the zip)

@@ -8,6 +8,7 @@ Covert Bitops), with real-time playback and PSID export.
 
 * `ntedit/model.py`  – song model (patterns, commands, wave/pulse/filter tables, tracks)
 * `ntedit/packed.py` – bit-exact reader/writer of NinjaTracker's packed "gamemusic" data
+* `ntedit/nt2file.py` – reader/writer of NinjaTracker's own song files (`*.nt2`)
 * `ntedit/psid.py`   – PSID export (play routine + packed data)
 * `ntedit/emu.py`    – runs the real 6502 play routine in py65 and renders the SID writes with reSID (pyresidfp)
 * `ntedit/audio.py`  – real-time playback through sounddevice
@@ -20,7 +21,7 @@ Covert Bitops), with real-time playback and PSID export.
     cd ntedit
     python3 -m venv --system-site-packages .venv      # needs python3-tk
     .venv/bin/pip install numpy py65 pyresidfp sounddevice pytest
-    .venv/bin/python -m ntedit [file.nt2.json | file.bin | file.sid]
+    .venv/bin/python -m ntedit [file.nt2 | file.nt2.json | file.bin | file.sid]
 
 Keys: F9 play song, F10 play current pattern, F12 stop, F1-F7 octave, Ctrl+Z/Y undo/redo,
 Ctrl+S save.  Each tab shows its own key help at the bottom.
@@ -28,7 +29,9 @@ Piano keys in the pattern note column: `z s x d c v g b h n j m` (lower octave),
 
 Projects are JSON (`*.nt2.json`).  *File > Export SID* writes a PSID v2 (PAL, 6581)
 whose player is at $1000 and data at $14D3.  SIDs written by this editor can be
-re-imported; original NinjaTracker "gamemusic" `.bin` files (address stripped, base $1000) can be imported too.
+re-imported. Songs saved by the original C64 NinjaTracker (`*.nt2`) can be imported (*File > Import NinjaTracker song*,
+or pass the file on the command line) and exported again (*File > Export NinjaTracker song*), including command
+names; original NinjaTracker "gamemusic" `.bin` files (address stripped, base $1000) can be imported too.
 
 ## Tests
 
